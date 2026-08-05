@@ -1,0 +1,238 @@
+@import "tailwindcss";
+
+/* ============================================================================
+   SmartTour — Design System & Custom Styles
+   ============================================================================ */
+
+/* --- Custom Theme Tokens --- */
+@theme {
+  --color-primary: #111827;
+  --color-primary-light: #374151;
+  --color-secondary: #6B7280;
+  --color-accent-green: #059669;
+  --color-accent-green-light: #D1FAE5;
+  --color-accent-blue: #2563EB;
+  --color-accent-blue-light: #DBEAFE;
+  --color-accent-orange: #D97706;
+  --color-accent-orange-light: #FEF3C7;
+  --color-accent-red: #DC2626;
+  --color-accent-red-light: #FEE2E2;
+  --color-surface: #FFFFFF;
+  --color-surface-secondary: #F9FAFB;
+  --color-surface-tertiary: #F3F4F6;
+  --color-border: #E5E7EB;
+  --color-border-light: #F3F4F6;
+  
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Outfit', 'Inter', system-ui, sans-serif;
+
+  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
+  --shadow-card-hover: 0 10px 25px -3px rgba(0, 0, 0, 0.08), 0 4px 10px -4px rgba(0, 0, 0, 0.04);
+  --shadow-elevated: 0 20px 50px -12px rgba(0, 0, 0, 0.12);
+  --shadow-glow-green: 0 0 20px rgba(5, 150, 105, 0.15);
+  --shadow-glow-blue: 0 0 20px rgba(37, 99, 235, 0.15);
+}
+
+/* --- Base Styles --- */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    color: var(--color-primary);
+    background-color: var(--color-surface);
+    line-height: 1.6;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    background-color: rgba(5, 150, 105, 0.15);
+    color: var(--color-primary);
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #D1D5DB;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #9CA3AF;
+  }
+}
+
+/* --- Component Utilities --- */
+@layer components {
+  /* Glass card effect */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+
+  /* Premium card */
+  .card {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid var(--color-border-light);
+    box-shadow: var(--shadow-card);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+  }
+  .card:hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    background: linear-gradient(135deg, var(--color-accent-green), var(--color-accent-blue));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Status dot */
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .status-dot.pulse {
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  /* Loading skeleton */
+  .skeleton {
+    background: linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 50%, #F3F4F6 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+    border-radius: 8px;
+  }
+
+  /* Section container */
+  .section-container {
+    width: 100%;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  /* Badge */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 10px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.5;
+    white-space: nowrap;
+  }
+
+  /* Floating elements for hero */
+  .float-slow {
+    animation: float 6s ease-in-out infinite;
+  }
+  .float-medium {
+    animation: float 4s ease-in-out infinite;
+  }
+  .float-fast {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  /* Admin sidebar */
+  .admin-sidebar {
+    background: linear-gradient(180deg, #111827 0%, #1F2937 100%);
+  }
+
+  /* Map container */
+  .map-container {
+    width: 100%;
+    height: 100%;
+    border-radius: 16px;
+    overflow: hidden;
+    z-index: 0;
+  }
+
+  /* Custom leaflet styles */
+  .leaflet-popup-content-wrapper {
+    border-radius: 12px !important;
+    box-shadow: var(--shadow-elevated) !important;
+    padding: 0 !important;
+    overflow: hidden;
+  }
+  .leaflet-popup-content {
+    margin: 0 !important;
+    width: 280px !important;
+  }
+  .leaflet-popup-tip {
+    box-shadow: none !important;
+  }
+
+  /* Input base styles */
+  .input-base {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    border-radius: 10px;
+    border: 1.5px solid var(--color-border);
+    background: white;
+    font-size: 0.9375rem;
+    color: var(--color-primary);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    outline: none;
+  }
+  .input-base:focus {
+    border-color: var(--color-accent-green);
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+  }
+  .input-base::placeholder {
+    color: #9CA3AF;
+  }
+}
+
+/* --- Animations --- */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.3); }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* --- Leaflet Map Imports --- */
+@import "leaflet/dist/leaflet.css";

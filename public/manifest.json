@@ -1,0 +1,16 @@
+{
+  "short_name": "SmartTour",
+  "name": "SmartTour — QR-Based Tourist Issue Reporting Platform",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#ffffff",
+  "theme_color": "#059669",
+  "display": "standalone",
+  "orientation": "portrait"
+}
