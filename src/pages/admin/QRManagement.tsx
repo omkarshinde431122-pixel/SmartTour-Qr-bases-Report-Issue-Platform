@@ -6,15 +6,12 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import {
-  QrCode,
   Download,
   Printer,
   Copy,
   CheckCircle,
   Search,
   Loader2,
-  ExternalLink,
-  MapPin,
 } from 'lucide-react';
 import { getLocations } from '../../services/dataService';
 import { LOCATION_CATEGORY_MAP } from '../../constants';
@@ -50,7 +47,7 @@ export default function AdminQRManagement() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const downloadQR = (slug: string, name: string) => {
+  const downloadQR = (slug: string, _name?: string) => {
     const svg = document.getElementById(`qr-${slug}`);
     if (!svg) return;
 

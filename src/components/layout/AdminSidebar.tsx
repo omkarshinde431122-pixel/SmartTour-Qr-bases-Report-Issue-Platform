@@ -13,7 +13,6 @@ import {
   BarChart3,
   LogOut,
   ChevronLeft,
-  Settings,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 

@@ -4,7 +4,7 @@
 
 import { useSearchParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CheckCircle, Copy, Search, Home, ArrowRight } from 'lucide-react';
+import { CheckCircle, Copy, Search, Home } from 'lucide-react';
 import { useState } from 'react';
 
 export default function ReportSuccess() {

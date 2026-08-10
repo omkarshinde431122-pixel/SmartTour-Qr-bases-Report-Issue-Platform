@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, FileText, MapPin, Clock, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
+import { Search, FileText, MapPin, Clock, CheckCircle, Loader2 } from 'lucide-react';
 import { getReportByReportId } from '../services/dataService';
 import { CATEGORY_MAP, STATUS_MAP, PRIORITY_MAP } from '../constants';
 import type { Report } from '../types';
@@ -180,7 +180,7 @@ export default function TrackComplaint() {
                     <div className="space-y-2">
                       {report.adminNotes.map((note, idx) => (
                         <div key={idx} className="p-3 bg-emerald-50/70 border border-emerald-100 rounded-xl text-xs text-gray-700 leading-relaxed">
-                          📌 {note}
+                          📌 {typeof note === 'string' ? note : note.content}
                         </div>
                       ))}
                     </div>

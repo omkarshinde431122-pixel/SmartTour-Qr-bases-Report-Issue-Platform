@@ -84,7 +84,7 @@ export interface Report {
   status: ReportStatus;
   priority: ReportPriority;
   assignedTo?: string;
-  adminNotes: AdminNote[];
+  adminNotes: (string | AdminNote)[];
   aiSuggestedCategory?: ReportCategory;
   aiSuggestedPriority?: ReportPriority;
   networkProvider?: string;

@@ -4,19 +4,14 @@
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import {
   MapPin,
   Search,
-  Filter,
   List,
   Map as MapIcon,
-  Mountain,
   AlertTriangle,
-  Navigation,
-  X,
 } from 'lucide-react';
 import { getLocations } from '../services/dataService';
 import { LOCATION_CATEGORY_MAP, MAP_DEFAULT_CENTER, MAP_DEFAULT_ZOOM, TREKKING_ROUTES } from '../constants';

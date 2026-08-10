@@ -260,7 +260,7 @@ export async function getLocationBySlug(slug: string): Promise<TouristLocation |
 }
 
 export async function getLocationById(id: string): Promise<TouristLocation | null> {
-  if (!isFirebaseConfigured) {
+  if (!isFirebaseConfigured || !db) {
     return mockLocations.find((l) => l.id === id) || null;
   }
 
@@ -276,7 +276,7 @@ export async function getLocationById(id: string): Promise<TouristLocation | nul
 }
 
 export async function createLocation(data: Partial<TouristLocation>): Promise<string> {
-  if (!isFirebaseConfigured) {
+  if (!isFirebaseConfigured || !db) {
     const newId = `loc-${mockLocations.length + 1}`;
     const newLoc = {
       ...data,
@@ -303,7 +303,7 @@ export async function createLocation(data: Partial<TouristLocation>): Promise<st
 }
 
 export async function updateLocation(id: string, data: Partial<TouristLocation>): Promise<void> {
-  if (!isFirebaseConfigured) {
+  if (!isFirebaseConfigured || !db) {
     mockLocations = mockLocations.map((l) =>
       l.id === id ? { ...l, ...data, updatedAt: new Date() } : l
     );

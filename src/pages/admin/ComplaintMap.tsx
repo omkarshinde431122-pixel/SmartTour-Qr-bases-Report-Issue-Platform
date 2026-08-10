@@ -5,10 +5,10 @@
 import { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { getReports, getLocations } from '../../services/dataService';
 import { STATUS_MAP, CATEGORY_MAP, PRIORITY_MAP, MAP_DEFAULT_CENTER, MAP_DEFAULT_ZOOM } from '../../constants';
-import type { Report, TouristLocation } from '../../types';
+import type { Report } from '../../types';
 import { formatDateTime } from '../../utils';
 
 function createComplaintIcon(color: string) {
@@ -25,7 +25,6 @@ function createComplaintIcon(color: string) {
 
 export default function AdminComplaintMap() {
   const [reports, setReports] = useState<Report[]>([]);
-  const [locations, setLocations] = useState<TouristLocation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -46,7 +45,6 @@ export default function AdminComplaintMap() {
         return r;
       });
       setReports(reportsWithCoords);
-      setLocations(locationsData);
       setIsLoading(false);
     };
     fetchData();

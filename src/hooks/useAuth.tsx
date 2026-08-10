@@ -24,14 +24,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// Demo admin user for development without Firebase
-const DEMO_ADMIN: AppUser = {
-  uid: 'demo-admin-001',
-  email: 'admin@smarttour.dev',
-  displayName: 'Admin User',
-  role: 'admin',
-  createdAt: new Date(),
-};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);

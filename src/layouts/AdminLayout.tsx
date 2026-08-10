@@ -7,7 +7,7 @@ import AdminSidebar from '../components/layout/AdminSidebar';
 import { useAuth } from '../hooks/useAuth';
 
 export default function AdminLayout() {
-  const { isAdmin, appUser, isLoading } = useAuth();
+  const { appUser, isLoading } = useAuth();
 
   if (isLoading) {
     return (

@@ -8,13 +8,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   MapPin,
   AlertTriangle,
-  Upload,
   X,
   CheckCircle,
   Camera,
   Sparkles,
   Loader2,
-  ChevronDown,
 } from 'lucide-react';
 import { getLocationBySlug, getLocations, createReport } from '../services/dataService';
 import { analyzeComplaint } from '../services/aiService';

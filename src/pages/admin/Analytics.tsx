@@ -3,8 +3,7 @@
 // ============================================================================
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { BarChart3, TrendingUp, Loader2, Calendar, MapPin, AlertTriangle } from 'lucide-react';
+import { TrendingUp, Loader2, Calendar, MapPin, AlertTriangle } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -16,8 +15,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line,
   Area,
   AreaChart,
 } from 'recharts';

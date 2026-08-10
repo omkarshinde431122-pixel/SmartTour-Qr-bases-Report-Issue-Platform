@@ -5,14 +5,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import {
   MapPin,
   AlertTriangle,
   ArrowLeft,
   Mountain,
-  Clock,
   Compass,
   Info,
   CheckCircle,

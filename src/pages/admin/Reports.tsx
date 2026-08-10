@@ -6,25 +6,19 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
-  Filter,
-  ChevronDown,
   Eye,
-  Clock,
-  CheckCircle,
   X,
-  AlertTriangle,
   FileText,
   Loader2,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { getReports, updateReportStatus, updateReportPriority, addAdminNote, getLocations } from '../../services/dataService';
+import { getReports, updateReportStatus, updateReportPriority, addAdminNote } from '../../services/dataService';
 import { REPORT_CATEGORIES, REPORT_STATUSES, REPORT_PRIORITIES, STATUS_MAP, CATEGORY_MAP, PRIORITY_MAP } from '../../constants';
-import type { Report, ReportStatus, ReportCategory, ReportPriority, TouristLocation } from '../../types';
+import type { Report, ReportStatus, ReportCategory, ReportPriority } from '../../types';
 import { formatDateTime } from '../../utils';
 
 export default function AdminReports() {
   const [reports, setReports] = useState<Report[]>([]);
-  const [locations, setLocations] = useState<TouristLocation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<ReportStatus | ''>('');
@@ -40,9 +34,8 @@ export default function AdminReports() {
 
   const fetchData = async () => {
     try {
-      const [reportsData, locationsData] = await Promise.all([getReports(), getLocations()]);
+      const reportsData = await getReports();
       setReports(reportsData);
-      setLocations(locationsData);
     } catch (error) {
       console.error('Failed to fetch reports:', error);
     } finally {
@@ -368,7 +361,7 @@ export default function AdminReports() {
                       <div className="space-y-2 mb-3">
                         {selectedReport.adminNotes.map((note, idx) => (
                           <div key={idx} className="p-2.5 bg-gray-50 rounded-lg text-xs text-gray-700 border border-gray-100">
-                            📝 {note}
+                            📝 {typeof note === 'string' ? note : note.content}
                           </div>
                         ))}
                       </div>

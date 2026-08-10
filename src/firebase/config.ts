@@ -33,7 +33,7 @@ export const db = (isFirebaseConfigured && app) ? getFirestore(app) : null;
 export const storage = (isFirebaseConfigured && app) ? getStorage(app) : null;
 
 // Analytics (browser supported check)
-export let analytics: returnType<typeof getAnalytics> | null = null;
+export let analytics: ReturnType<typeof getAnalytics> | null = null;
 if (isFirebaseConfigured && app) {
   isSupported().then((supported) => {
     if (supported) {
