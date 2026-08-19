@@ -1,8 +1,4 @@
-// ============================================================================
-// SmartTour — Admin Login Page
-// ============================================================================
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { MapPin, Lock, Mail, Eye, EyeOff, AlertCircle, ArrowLeft } from 'lucide-react';
@@ -19,10 +15,11 @@ export default function AdminLogin() {
   const [error, setError] = useState<string | null>(null);
 
   // If already logged in, redirect
-  if (isAdmin) {
-    navigate('/admin');
-    return null;
-  }
+  useEffect(() => {
+    if (isAdmin) {
+      navigate('/admin', { replace: true });
+    }
+  }, [isAdmin, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

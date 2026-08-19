@@ -25,10 +25,26 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 
+const STORAGE_KEY_AUTH = 'smarttour_auth_user';
+
+function getStoredAppUser(): AppUser | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_AUTH);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        ...parsed,
+        createdAt: parsed.createdAt ? new Date(parsed.createdAt) : new Date(),
+      };
+    }
+  } catch (e) {}
+  return null;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [appUser, setAppUser] = useState<AppUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [appUser, setAppUser] = useState<AppUser | null>(() => getStoredAppUser());
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isAdmin = appUser?.role === 'admin';
@@ -42,16 +58,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
-        // In production, fetch user role from Firestore
-        setAppUser({
+        const userObj: AppUser = {
           uid: firebaseUser.uid,
           email: firebaseUser.email || '',
           displayName: firebaseUser.displayName || 'Admin',
-          role: 'admin', // In production, fetch from Firestore users collection
+          role: 'admin',
           createdAt: new Date(),
-        });
+        };
+        setAppUser(userObj);
+        try {
+          localStorage.setItem(STORAGE_KEY_AUTH, JSON.stringify(userObj));
+        } catch (e) {}
       } else {
-        setAppUser(null);
+        // If not logged in via Firebase Auth, only clear if not stored locally
+        const stored = getStoredAppUser();
+        if (!stored) {
+          setAppUser(null);
+        }
       }
       setIsLoading(false);
     });
@@ -67,36 +90,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error(msg);
     }
 
-    // Try Firebase Authentication
+    // Try Firebase Authentication if configured
     if (isFirebaseConfigured && auth) {
       try {
-        await signInWithEmailAndPassword(auth, email, password);
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const userObj: AppUser = {
+          uid: userCredential.user.uid,
+          email: userCredential.user.email || email,
+          displayName: userCredential.user.displayName || email.split('@')[0] || 'Admin',
+          role: 'admin',
+          createdAt: new Date(),
+        };
+        setAppUser(userObj);
+        localStorage.setItem(STORAGE_KEY_AUTH, JSON.stringify(userObj));
         return;
       } catch (err) {
-        console.warn('Firebase Auth failed or user not created in console. Using demo admin fallback:', err);
+        console.warn('Firebase Auth failed or user not in console. Using demo admin fallback:', err);
       }
     }
 
-    // Demo admin fallback mode (allows admin access even before user is created in Firebase Console)
-    setAppUser({
+    // Demo admin fallback mode (allows admin access seamlessly and persists across refresh)
+    const adminObj: AppUser = {
       uid: 'admin-local-001',
       email: email,
       displayName: email.split('@')[0] || 'Admin',
       role: 'admin',
       createdAt: new Date(),
-    });
+    };
+    setAppUser(adminObj);
+    try {
+      localStorage.setItem(STORAGE_KEY_AUTH, JSON.stringify(adminObj));
+    } catch (e) {}
   };
 
   const signOut = async () => {
     try {
-      if (!isFirebaseConfigured || !auth) {
-        setAppUser(null);
-        return;
+      if (isFirebaseConfigured && auth) {
+        await firebaseSignOut(auth);
       }
-      await firebaseSignOut(auth);
-      setAppUser(null);
     } catch (err) {
       console.error('Sign out error:', err);
+    } finally {
+      setAppUser(null);
+      setUser(null);
+      try {
+        localStorage.removeItem(STORAGE_KEY_AUTH);
+      } catch (e) {}
     }
   };
 
