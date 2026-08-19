@@ -27,6 +27,36 @@ export default function TrackComplaint() {
     }
   }, [initialId]);
 
+  // Live real-time sync with admin changes
+  useEffect(() => {
+    const handleUpdate = (e: Event) => {
+      const customEvt = e as CustomEvent<Report[]>;
+      const currentTargetId = report?.reportId || report?.id || trackingId.trim();
+      if (!currentTargetId) return;
+      
+      const cleanTarget = currentTargetId.toUpperCase();
+      if (customEvt.detail && Array.isArray(customEvt.detail)) {
+        const found = customEvt.detail.find(
+          (r) => (r.reportId && r.reportId.toUpperCase() === cleanTarget) || (r.id && r.id.toUpperCase() === cleanTarget)
+        );
+        if (found) {
+          setReport(found);
+          setError(null);
+        }
+      } else {
+        handleSearch(currentTargetId);
+      }
+    };
+
+    window.addEventListener('smarttour_reports_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+
+    return () => {
+      window.removeEventListener('smarttour_reports_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
+  }, [report, trackingId]);
+
   const handleSearch = async (id?: string) => {
     const searchId = (id || trackingId).trim();
     if (!searchId) return;
@@ -210,16 +240,34 @@ export default function TrackComplaint() {
 
                 {/* Admin Authority Notes / Actions */}
                 {report.adminNotes && report.adminNotes.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-gray-100">
-                    <p className="text-xs font-bold text-emerald-800 mb-2 uppercase tracking-wider flex items-center gap-1.5">
-                      💬 Official Authority Actions & Notes
-                    </p>
-                    <div className="space-y-2">
-                      {report.adminNotes.map((note, idx) => (
-                        <div key={idx} className="p-3 bg-emerald-50/80 border border-emerald-100 rounded-xl text-xs text-emerald-900 leading-relaxed shadow-xs">
-                          <span className="font-semibold text-emerald-700">Action #{idx + 1}:</span> {typeof note === 'string' ? note : note.content}
-                        </div>
-                      ))}
+                  <div className="mt-5 pt-5 border-t border-gray-100">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                        🏛️ Official Authority Action Steps & Resolution Log
+                      </p>
+                      <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
+                        {report.adminNotes.length} Action{report.adminNotes.length > 1 ? 's' : ''} Taken
+                      </span>
+                    </div>
+                    <div className="space-y-2.5">
+                      {report.adminNotes.map((note, idx) => {
+                        const noteText = typeof note === 'string' ? note : note.content;
+                        return (
+                          <div
+                            key={idx}
+                            className="p-3.5 bg-gradient-to-r from-emerald-50/90 to-teal-50/50 border border-emerald-100 rounded-xl text-xs text-gray-800 leading-relaxed shadow-xs"
+                          >
+                            <div className="flex items-center justify-between gap-2 mb-1.5">
+                              <span className="inline-flex items-center gap-1 font-bold text-emerald-800 text-[11px] bg-white px-2 py-0.5 rounded-md border border-emerald-200 shadow-2xs">
+                                <span>⚡ Step {idx + 1}</span>
+                              </span>
+                              <span className="text-[10px] text-gray-500 font-medium">Authority Verified</span>
+                            </div>
+                            <p className="text-gray-700 pl-0.5 font-medium">{noteText}</p>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

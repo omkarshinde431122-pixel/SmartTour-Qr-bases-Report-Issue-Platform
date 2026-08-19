@@ -1,14 +1,10 @@
-// ============================================================================
-// SmartTour — Admin Complaint Map Page
-// ============================================================================
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
-import { Loader2, RefreshCw, Filter, Navigation, ExternalLink } from 'lucide-react';
+import { Loader2, RefreshCw, Filter, Navigation, ExternalLink, Layers } from 'lucide-react';
 import { getReports, getLocations } from '../../services/dataService';
-import { STATUS_MAP, CATEGORY_MAP, PRIORITY_MAP, MAP_DEFAULT_CENTER, MAP_DEFAULT_ZOOM } from '../../constants';
+import { STATUS_MAP, CATEGORY_MAP, PRIORITY_MAP, MAP_DEFAULT_CENTER, MAP_DEFAULT_ZOOM, MAP_TILE_PROVIDERS } from '../../constants';
 import type { Report, ReportStatus, ReportCategory } from '../../types';
 import { formatDateTime } from '../../utils';
 
@@ -51,6 +47,8 @@ export default function AdminComplaintMap() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [statusFilter, setStatusFilter] = useState<ReportStatus | 'all'>('all');
   const [categoryFilter, setCategoryFilter] = useState<ReportCategory | 'all'>('all');
+  const [activeTileKey, setActiveTileKey] = useState<keyof typeof MAP_TILE_PROVIDERS>('googleStreets');
+  const [showLayerMenu, setShowLayerMenu] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -171,6 +169,39 @@ export default function AdminComplaintMap() {
 
       {/* Map Display */}
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm relative" style={{ height: 'calc(100vh - 240px)', minHeight: '450px' }}>
+        {/* Floating Map Layer Switcher */}
+        <div className="absolute top-4 right-4 z-10 bg-white/95 backdrop-blur-md rounded-xl shadow-lg border border-gray-200 p-1.5 flex flex-col gap-1">
+          <button
+            onClick={() => setShowLayerMenu(!showLayerMenu)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Change Map Style"
+          >
+            <Layers className="w-3.5 h-3.5 text-emerald-600" />
+            <span>{MAP_TILE_PROVIDERS[activeTileKey]?.name || 'Google Roads'}</span>
+          </button>
+          {showLayerMenu && (
+            <div className="pt-1 border-t border-gray-100 flex flex-col gap-1">
+              {Object.values(MAP_TILE_PROVIDERS).map((provider) => (
+                <button
+                  key={provider.id}
+                  onClick={() => {
+                    setActiveTileKey(provider.id as keyof typeof MAP_TILE_PROVIDERS);
+                    setShowLayerMenu(false);
+                  }}
+                  className={`text-left px-2.5 py-1 text-[11px] rounded-md transition-colors flex items-center justify-between ${
+                    activeTileKey === provider.id
+                      ? 'bg-emerald-50 text-emerald-700 font-bold'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <span>{provider.name}</span>
+                  {activeTileKey === provider.id && <span className="text-emerald-600">✓</span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         <MapContainer
           center={MAP_DEFAULT_CENTER}
           zoom={MAP_DEFAULT_ZOOM}
@@ -178,8 +209,10 @@ export default function AdminComplaintMap() {
           zoomControl={true}
         >
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            key={activeTileKey}
+            attribution={MAP_TILE_PROVIDERS[activeTileKey]?.attribution || '&copy; Google Maps'}
+            url={MAP_TILE_PROVIDERS[activeTileKey]?.url || MAP_TILE_PROVIDERS.googleStreets.url}
+            maxZoom={MAP_TILE_PROVIDERS[activeTileKey]?.maxZoom || 20}
           />
 
           {filteredReports.map((report) => {

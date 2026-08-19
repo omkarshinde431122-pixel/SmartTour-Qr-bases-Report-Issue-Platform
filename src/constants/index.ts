@@ -301,4 +301,48 @@ export const IMAGE_COMPRESSION_OPTIONS = {
 export const MAP_DEFAULT_CENTER: [number, number] = [18.4529, 73.8774];
 export const MAP_DEFAULT_ZOOM = 13;
 export const MAP_MIN_ZOOM = 8;
-export const MAP_MAX_ZOOM = 18;
+export const MAP_MAX_ZOOM = 20;
+
+// --- High Performance Map Tile Providers (Google Maps & CartoDB) ---
+export interface MapTileProvider {
+  id: string;
+  name: string;
+  url: string;
+  attribution: string;
+  subdomains?: string[];
+  maxZoom: number;
+}
+
+export const MAP_TILE_PROVIDERS: Record<string, MapTileProvider> = {
+  googleStreets: {
+    id: 'googleStreets',
+    name: 'Google Roads',
+    url: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+    attribution: '&copy; Google Maps',
+    maxZoom: 20,
+  },
+  googleHybrid: {
+    id: 'googleHybrid',
+    name: 'Google Satellite',
+    url: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+    attribution: '&copy; Google Maps Satellite',
+    maxZoom: 20,
+  },
+  googleTerrain: {
+    id: 'googleTerrain',
+    name: 'Google Terrain',
+    url: 'https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
+    attribution: '&copy; Google Maps Terrain',
+    maxZoom: 20,
+  },
+  cartoVoyager: {
+    id: 'cartoVoyager',
+    name: 'CartoDB Clean',
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; CARTO',
+    subdomains: ['a', 'b', 'c', 'd'],
+    maxZoom: 19,
+  },
+};
+
+export const DEFAULT_MAP_TILE_PROVIDER = MAP_TILE_PROVIDERS.googleStreets;

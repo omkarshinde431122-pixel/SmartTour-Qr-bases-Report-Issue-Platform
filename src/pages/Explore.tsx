@@ -1,7 +1,3 @@
-// ============================================================================
-// SmartTour — Explore Page (Interactive Map)
-// ============================================================================
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
@@ -12,21 +8,22 @@ import {
   List,
   Map as MapIcon,
   AlertTriangle,
+  Layers,
 } from 'lucide-react';
 import { getLocations } from '../services/dataService';
-import { LOCATION_CATEGORY_MAP, MAP_DEFAULT_CENTER, MAP_DEFAULT_ZOOM, TREKKING_ROUTES } from '../constants';
+import { LOCATION_CATEGORY_MAP, MAP_DEFAULT_CENTER, MAP_DEFAULT_ZOOM, TREKKING_ROUTES, MAP_TILE_PROVIDERS } from '../constants';
 import type { TouristLocation, LocationCategory } from '../types';
 
 // Custom marker icon
 function createMarkerIcon(color: string) {
   return L.divIcon({
     className: 'custom-marker',
-    html: `<div style="background:${color};width:32px;height:32px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;">
-      <div style="transform:rotate(45deg);color:white;font-size:14px;">📍</div>
+    html: `<div style="background:${color};width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;">
+      <div style="transform:rotate(45deg);color:white;font-size:15px;font-weight:bold;">📍</div>
     </div>`,
-    iconSize: [32, 32],
-    iconAnchor: [16, 32],
-    popupAnchor: [0, -32],
+    iconSize: [34, 34],
+    iconAnchor: [17, 34],
+    popupAnchor: [0, -34],
   });
 }
 
@@ -48,6 +45,8 @@ export default function Explore() {
   const [showList, setShowList] = useState(false);
   const [flyTo, setFlyTo] = useState<[number, number] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTileKey, setActiveTileKey] = useState<keyof typeof MAP_TILE_PROVIDERS>('googleStreets');
+  const [showLayerMenu, setShowLayerMenu] = useState(false);
 
   useEffect(() => {
     const fetchLocations = async () => {
@@ -73,6 +72,7 @@ export default function Explore() {
   });
 
   const categories = Object.entries(LOCATION_CATEGORY_MAP);
+  const currentTileProvider = MAP_TILE_PROVIDERS[activeTileKey] || MAP_TILE_PROVIDERS.googleStreets;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -128,11 +128,44 @@ export default function Explore() {
       <div className="flex h-[calc(100vh-8rem)]">
         {/* Map */}
         <div className={`flex-1 relative ${showList ? 'hidden sm:block' : ''}`}>
+          {/* Floating Map Layer Switcher */}
+          <div className="absolute top-4 right-4 z-10 bg-white/95 backdrop-blur-md rounded-xl shadow-lg border border-gray-200 p-1.5 flex flex-col gap-1">
+            <button
+              onClick={() => setShowLayerMenu(!showLayerMenu)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Change Map Style"
+            >
+              <Layers className="w-3.5 h-3.5 text-emerald-600" />
+              <span>{currentTileProvider.name}</span>
+            </button>
+            {showLayerMenu && (
+              <div className="pt-1 border-t border-gray-100 flex flex-col gap-1">
+                {Object.values(MAP_TILE_PROVIDERS).map((provider) => (
+                  <button
+                    key={provider.id}
+                    onClick={() => {
+                      setActiveTileKey(provider.id as keyof typeof MAP_TILE_PROVIDERS);
+                      setShowLayerMenu(false);
+                    }}
+                    className={`text-left px-2.5 py-1 text-[11px] rounded-md transition-colors flex items-center justify-between ${
+                      activeTileKey === provider.id
+                        ? 'bg-emerald-50 text-emerald-700 font-bold'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span>{provider.name}</span>
+                    {activeTileKey === provider.id && <span className="text-emerald-600">✓</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {isLoading ? (
             <div className="w-full h-full flex items-center justify-center bg-gray-100">
               <div className="text-center">
                 <div className="w-8 h-8 border-3 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mx-auto mb-2" />
-                <p className="text-sm text-gray-500">Loading map...</p>
+                <p className="text-sm text-gray-500">Loading Google Maps...</p>
               </div>
             </div>
           ) : (
@@ -143,8 +176,10 @@ export default function Explore() {
               zoomControl={false}
             >
               <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                key={currentTileProvider.id}
+                attribution={currentTileProvider.attribution}
+                url={currentTileProvider.url}
+                maxZoom={currentTileProvider.maxZoom}
               />
               <FlyToLocation center={flyTo} />
 

@@ -18,7 +18,7 @@ import {
   QrCode,
 } from 'lucide-react';
 import { getLocationBySlug, getReports } from '../services/dataService';
-import { LOCATION_CATEGORY_MAP, CATEGORY_MAP, STATUS_MAP, PRIORITY_MAP, TREKKING_ROUTES } from '../constants';
+import { LOCATION_CATEGORY_MAP, CATEGORY_MAP, STATUS_MAP, PRIORITY_MAP, TREKKING_ROUTES, MAP_TILE_PROVIDERS } from '../constants';
 import type { TouristLocation, Report } from '../types';
 
 const locationIcon = L.divIcon({
@@ -265,7 +265,11 @@ export default function LocationDetails() {
                   dragging={false}
                   scrollWheelZoom={false}
                 >
-                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                  <TileLayer
+                    attribution={MAP_TILE_PROVIDERS.googleStreets.attribution}
+                    url={MAP_TILE_PROVIDERS.googleStreets.url}
+                    maxZoom={MAP_TILE_PROVIDERS.googleStreets.maxZoom}
+                  />
                   {TREKKING_ROUTES.filter((r) => r.locationSlug === location.slug).map((route) => (
                     <Polyline
                       key={route.id}

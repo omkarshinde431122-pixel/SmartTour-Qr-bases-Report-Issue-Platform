@@ -31,10 +31,13 @@ import { SAMPLE_LOCATIONS } from '../constants';
 import { generateReportId } from '../utils';
 
 // ============================================================================
-// MOCK DATA (used when Firebase is not configured)
+// MOCK DATA & STORAGE SYNCHRONIZATION
 // ============================================================================
 
-let mockLocations: TouristLocation[] = SAMPLE_LOCATIONS.map((loc, idx) => ({
+const STORAGE_KEY_REPORTS = 'smarttour_local_reports';
+const STORAGE_KEY_LOCATIONS = 'smarttour_local_locations';
+
+const INITIAL_MOCK_LOCATIONS: TouristLocation[] = SAMPLE_LOCATIONS.map((loc, idx) => ({
   ...loc,
   id: `loc-${idx + 1}`,
   images: [],
@@ -42,7 +45,7 @@ let mockLocations: TouristLocation[] = SAMPLE_LOCATIONS.map((loc, idx) => ({
   updatedAt: new Date('2026-08-01'),
 }));
 
-let mockReports: Report[] = [
+const INITIAL_MOCK_REPORTS: Report[] = [
   {
     id: 'rpt-1',
     reportId: 'ST-2026-100001',
@@ -71,7 +74,7 @@ let mockReports: Report[] = [
     imageRefs: [],
     status: 'in_progress',
     priority: 'high',
-    adminNotes: [],
+    adminNotes: ['Field team dispatched to inspect road depression and place temporary warning barricades.'],
     createdAt: new Date('2026-08-01T14:20:00'),
     updatedAt: new Date('2026-08-04T09:00:00'),
   },
@@ -87,7 +90,7 @@ let mockReports: Report[] = [
     imageRefs: [],
     status: 'under_review',
     priority: 'medium',
-    adminNotes: [],
+    adminNotes: ['Assigned to Forestry division for route re-marking and directional board installation.'],
     createdAt: new Date('2026-08-02T08:45:00'),
     updatedAt: new Date('2026-08-03T11:00:00'),
   },
@@ -119,7 +122,7 @@ let mockReports: Report[] = [
     imageRefs: [],
     status: 'resolved',
     priority: 'medium',
-    adminNotes: [],
+    adminNotes: ['New neon high-visibility trail markers installed along the entire 5.2 km stretch.'],
     createdAt: new Date('2026-07-28T07:15:00'),
     updatedAt: new Date('2026-08-02T13:00:00'),
     resolvedAt: new Date('2026-08-02T13:00:00'),
@@ -136,7 +139,7 @@ let mockReports: Report[] = [
     imageRefs: [],
     status: 'in_progress',
     priority: 'high',
-    adminNotes: [],
+    adminNotes: ['Water testing sample collected. Warning board placed advising tourists not to consume water.'],
     createdAt: new Date('2026-08-03T12:00:00'),
     updatedAt: new Date('2026-08-04T10:30:00'),
   },
@@ -168,7 +171,7 @@ let mockReports: Report[] = [
     imageRefs: [],
     status: 'closed',
     priority: 'low',
-    adminNotes: [],
+    adminNotes: ['Additional overflow parking lot opened 200m before main viewpoint.'],
     createdAt: new Date('2026-07-20T11:00:00'),
     updatedAt: new Date('2026-07-25T15:00:00'),
     resolvedAt: new Date('2026-07-25T15:00:00'),
@@ -179,35 +182,131 @@ let mockReports: Report[] = [
     locationId: 'loc-1',
     locationName: 'Bopdev Ghat',
     category: 'network',
-    title: 'No mobile network coverage on trail',
-    description: 'There is absolutely no mobile network coverage once you pass the first kilometer on the main trail. This is a safety concern as hikers cannot call for help in emergencies.',
+    title: 'No mobile network after 1st kilometer',
+    description: 'Airtel and Jio signals completely drop after passing the first viewpoint. In case of emergency there is no way to call for help.',
     imageUrls: [],
     imageRefs: [],
     status: 'under_review',
     priority: 'high',
-    networkProvider: 'All providers',
+    adminNotes: ['Emergency Wi-Fi SOS hotspot installation under review with local telecom authorities.'],
+    networkProvider: 'Jio / Airtel',
     networkIssueType: 'no_network',
-    adminNotes: [],
-    createdAt: new Date('2026-08-05T06:30:00'),
-    updatedAt: new Date('2026-08-05T10:00:00'),
+    createdAt: new Date('2026-08-05T08:00:00'),
+    updatedAt: new Date('2026-08-05T08:00:00'),
   },
   {
     id: 'rpt-10',
     reportId: 'ST-2026-100010',
-    locationId: 'loc-1',
-    locationName: 'Bopdev Ghat',
+    locationId: 'loc-3',
+    locationName: 'Bopdev Ghat Viewpoint',
     category: 'lighting',
-    title: 'No lighting on approach road after sunset',
-    description: 'The approach road from the highway to the parking area has no street lights. Visitors returning after sunset find it very difficult and dangerous to navigate.',
+    title: 'Solar lights not working during evening hours',
+    description: 'Two solar streetlights installed along the viewpoint pathway are non-functional. The area is completely dark after 6:30 PM creating security risks.',
     imageUrls: [],
     imageRefs: [],
-    status: 'reported',
+    status: 'in_progress',
     priority: 'medium',
-    adminNotes: [],
-    createdAt: new Date('2026-08-05T18:45:00'),
-    updatedAt: new Date('2026-08-05T18:45:00'),
+    adminNotes: ['Solar battery replacement requisition submitted to municipal contractor.'],
+    createdAt: new Date('2026-08-05T14:30:00'),
+    updatedAt: new Date('2026-08-06T09:15:00'),
   },
 ];
+
+// Helper to revive dates from JSON
+function reviveReport(r: any): Report {
+  return {
+    ...r,
+    createdAt: r.createdAt ? new Date(r.createdAt) : new Date(),
+    updatedAt: r.updatedAt ? new Date(r.updatedAt) : new Date(),
+    resolvedAt: r.resolvedAt ? new Date(r.resolvedAt) : undefined,
+    adminNotes: Array.isArray(r.adminNotes) ? r.adminNotes : [],
+  };
+}
+
+function reviveLocation(l: any): TouristLocation {
+  return {
+    ...l,
+    createdAt: l.createdAt ? new Date(l.createdAt) : new Date(),
+    updatedAt: l.updatedAt ? new Date(l.updatedAt) : new Date(),
+  };
+}
+
+function loadReportsFromStorage(): Report[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_REPORTS);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map(reviveReport);
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to load reports from localStorage', e);
+  }
+  // Initialize storage with defaults
+  try {
+    localStorage.setItem(STORAGE_KEY_REPORTS, JSON.stringify(INITIAL_MOCK_REPORTS));
+  } catch (e) {}
+  return [...INITIAL_MOCK_REPORTS];
+}
+
+function loadLocationsFromStorage(): TouristLocation[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_LOCATIONS);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map(reviveLocation);
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to load locations from localStorage', e);
+  }
+  try {
+    localStorage.setItem(STORAGE_KEY_LOCATIONS, JSON.stringify(INITIAL_MOCK_LOCATIONS));
+  } catch (e) {}
+  return [...INITIAL_MOCK_LOCATIONS];
+}
+
+let mockLocations: TouristLocation[] = loadLocationsFromStorage();
+let mockReports: Report[] = loadReportsFromStorage();
+
+function saveReportsToStorage(reports: Report[]): void {
+  mockReports = reports;
+  try {
+    localStorage.setItem(STORAGE_KEY_REPORTS, JSON.stringify(reports));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('smarttour_reports_updated', { detail: reports }));
+    }
+  } catch (e) {
+    console.warn('Failed to save reports to localStorage', e);
+  }
+}
+
+function saveLocationsToStorage(locations: TouristLocation[]): void {
+  mockLocations = locations;
+  try {
+    localStorage.setItem(STORAGE_KEY_LOCATIONS, JSON.stringify(locations));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('smarttour_locations_updated', { detail: locations }));
+    }
+  } catch (e) {
+    console.warn('Failed to save locations to localStorage', e);
+  }
+}
+
+// Cross-tab storage event listener
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key === STORAGE_KEY_REPORTS) {
+      mockReports = loadReportsFromStorage();
+      window.dispatchEvent(new CustomEvent('smarttour_reports_updated', { detail: mockReports }));
+    } else if (e.key === STORAGE_KEY_LOCATIONS) {
+      mockLocations = loadLocationsFromStorage();
+      window.dispatchEvent(new CustomEvent('smarttour_locations_updated', { detail: mockLocations }));
+    }
+  });
+}
 
 // ============================================================================
 // LOCATION SERVICES
@@ -285,7 +384,8 @@ export async function getLocationById(id: string): Promise<TouristLocation | nul
 
 export async function createLocation(data: Partial<TouristLocation>): Promise<string> {
   if (!isFirebaseConfigured || !db) {
-    const newId = `loc-${mockLocations.length + 1}`;
+    const currentLocs = loadLocationsFromStorage();
+    const newId = `loc-${currentLocs.length + 1}`;
     const newLoc = {
       ...data,
       id: newId,
@@ -296,7 +396,8 @@ export async function createLocation(data: Partial<TouristLocation>): Promise<st
       createdAt: new Date(),
       updatedAt: new Date(),
     } as TouristLocation;
-    mockLocations.push(newLoc);
+    const updated = [...currentLocs, newLoc];
+    saveLocationsToStorage(updated);
     return newId;
   }
 
@@ -311,12 +412,13 @@ export async function createLocation(data: Partial<TouristLocation>): Promise<st
 }
 
 export async function updateLocation(id: string, data: Partial<TouristLocation>): Promise<void> {
-  if (!isFirebaseConfigured || !db) {
-    mockLocations = mockLocations.map((l) =>
-      l.id === id ? { ...l, ...data, updatedAt: new Date() } : l
-    );
-    return;
-  }
+  const currentLocs = loadLocationsFromStorage();
+  const updated = currentLocs.map((l) =>
+    l.id === id ? { ...l, ...data, updatedAt: new Date() } : l
+  );
+  saveLocationsToStorage(updated);
+
+  if (!isFirebaseConfigured || !db) return;
 
   await updateDoc(doc(db, 'locations', id), {
     ...data,
@@ -404,8 +506,9 @@ function addMockReport(
   existingReportId?: string
 ): string {
   const reportId = existingReportId || generateReportId();
+  const currentReports = loadReportsFromStorage();
   const newReport: Report = {
-    id: `rpt-${mockReports.length + 1}`,
+    id: `rpt-${currentReports.length + 1}`,
     reportId,
     locationId: data.locationId,
     locationName: data.locationName,
@@ -426,18 +529,15 @@ function addMockReport(
     createdAt: new Date(),
     updatedAt: new Date(),
   };
-  mockReports.unshift(newReport);
-  try {
-    localStorage.setItem('smarttour_local_reports', JSON.stringify(mockReports));
-  } catch (e) {
-    // Ignore quota errors
-  }
+  const updated = [newReport, ...currentReports];
+  saveReportsToStorage(updated);
   return reportId;
 }
 
 export async function getReportByReportId(reportId: string): Promise<Report | null> {
   const cleanId = reportId.trim().toUpperCase();
-  const localReport = mockReports.find(
+  const currentReports = loadReportsFromStorage();
+  const localReport = currentReports.find(
     (r) => (r.reportId && r.reportId.toUpperCase() === cleanId) || (r.id && r.id.toUpperCase() === cleanId)
   );
 
@@ -481,12 +581,13 @@ export async function getReportByReportId(reportId: string): Promise<Report | nu
         } as Report;
 
         // Keep local cache synced
-        const idx = mockReports.findIndex((r) => r.reportId === remoteData.reportId || r.id === remoteData.id);
+        const idx = currentReports.findIndex((r) => r.reportId === remoteData.reportId || r.id === remoteData.id);
         if (idx !== -1) {
-          mockReports[idx] = remoteData;
+          currentReports[idx] = remoteData;
         } else {
-          mockReports.unshift(remoteData);
+          currentReports.unshift(remoteData);
         }
+        saveReportsToStorage(currentReports);
 
         return remoteData;
       }
@@ -583,7 +684,8 @@ export async function updateReportStatus(
   status: ReportStatus
 ): Promise<void> {
   const now = new Date();
-  mockReports = mockReports.map((r) =>
+  const currentReports = loadReportsFromStorage();
+  const updatedReports = currentReports.map((r) =>
     r.id === id || r.reportId === id
       ? {
           ...r,
@@ -593,9 +695,7 @@ export async function updateReportStatus(
         }
       : r
   );
-  try {
-    localStorage.setItem('smarttour_local_reports', JSON.stringify(mockReports));
-  } catch (e) {}
+  saveReportsToStorage(updatedReports);
 
   if (!isFirebaseConfigured || !db) return;
 
@@ -630,12 +730,11 @@ export async function updateReportPriority(
   id: string,
   priority: ReportPriority
 ): Promise<void> {
-  mockReports = mockReports.map((r) =>
+  const currentReports = loadReportsFromStorage();
+  const updatedReports = currentReports.map((r) =>
     r.id === id || r.reportId === id ? { ...r, priority, updatedAt: new Date() } : r
   );
-  try {
-    localStorage.setItem('smarttour_local_reports', JSON.stringify(mockReports));
-  } catch (e) {}
+  saveReportsToStorage(updatedReports);
 
   if (!isFirebaseConfigured || !db) return;
 
@@ -658,7 +757,8 @@ export async function updateReportPriority(
 }
 
 export async function addAdminNote(id: string, note: string): Promise<void> {
-  mockReports = mockReports.map((r) => {
+  const currentReports = loadReportsFromStorage();
+  const updatedReports = currentReports.map((r) => {
     if (r.id === id || r.reportId === id) {
       return {
         ...r,
@@ -668,9 +768,7 @@ export async function addAdminNote(id: string, note: string): Promise<void> {
     }
     return r;
   });
-  try {
-    localStorage.setItem('smarttour_local_reports', JSON.stringify(mockReports));
-  } catch (e) {}
+  saveReportsToStorage(updatedReports);
 
   if (!isFirebaseConfigured || !db) return;
 
