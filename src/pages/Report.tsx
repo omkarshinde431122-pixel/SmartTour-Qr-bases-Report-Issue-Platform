@@ -56,20 +56,25 @@ export default function Report() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Load location from QR code slug
+  // Load location from QR code slug or query parameter
   useEffect(() => {
     const loadData = async () => {
+      const locs = await getLocations();
+      setAllLocations(locs);
+
       if (locationSlug) {
         setIsLoadingLocation(true);
-        const loc = await getLocationBySlug(locationSlug);
+        let loc = await getLocationBySlug(locationSlug);
+        if (!loc) {
+          const norm = locationSlug.toLowerCase();
+          loc = locs.find((l) => l.slug.toLowerCase() === norm || l.id.toLowerCase() === norm || l.name.toLowerCase() === norm) || null;
+        }
         if (loc) {
           setLocation(loc);
           setSelectedLocationId(loc.id);
         }
         setIsLoadingLocation(false);
       }
-      const locs = await getLocations();
-      setAllLocations(locs);
     };
     loadData();
   }, [locationSlug]);

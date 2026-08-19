@@ -56,30 +56,46 @@ export default function AdminReports() {
   });
 
   const handleStatusChange = async (reportId: string, newStatus: ReportStatus) => {
-    await updateReportStatus(reportId, newStatus);
-    setReports((prev) =>
-      prev.map((r) =>
-        r.id === reportId ? { ...r, status: newStatus, updatedAt: new Date() } : r
-      )
-    );
-    if (selectedReport?.id === reportId) {
-      setSelectedReport((prev) => prev ? { ...prev, status: newStatus, updatedAt: new Date() } : null);
+    try {
+      await updateReportStatus(reportId, newStatus);
+      const now = new Date();
+      setReports((prev) =>
+        prev.map((r) =>
+          r.id === reportId || r.reportId === reportId
+            ? { ...r, status: newStatus, updatedAt: now, resolvedAt: newStatus === 'resolved' ? now : r.resolvedAt }
+            : r
+        )
+      );
+      if (selectedReport && (selectedReport.id === reportId || selectedReport.reportId === reportId)) {
+        setSelectedReport((prev) =>
+          prev
+            ? { ...prev, status: newStatus, updatedAt: now, resolvedAt: newStatus === 'resolved' ? now : prev.resolvedAt }
+            : null
+        );
+      }
+      const statusObj = STATUS_MAP[newStatus];
+      toast.success(`Status updated to ${statusObj?.label || newStatus}`);
+    } catch (err) {
+      toast.error('Failed to update status in database');
     }
-    const statusObj = STATUS_MAP[newStatus];
-    toast.success(`Status updated to ${statusObj?.label || newStatus}`);
   };
 
   const handlePriorityChange = async (reportId: string, newPriority: ReportPriority) => {
-    await updateReportPriority(reportId, newPriority);
-    setReports((prev) =>
-      prev.map((r) =>
-        r.id === reportId ? { ...r, priority: newPriority, updatedAt: new Date() } : r
-      )
-    );
-    if (selectedReport?.id === reportId) {
-      setSelectedReport((prev) => prev ? { ...prev, priority: newPriority, updatedAt: new Date() } : null);
+    try {
+      await updateReportPriority(reportId, newPriority);
+      const now = new Date();
+      setReports((prev) =>
+        prev.map((r) =>
+          r.id === reportId || r.reportId === reportId ? { ...r, priority: newPriority, updatedAt: now } : r
+        )
+      );
+      if (selectedReport && (selectedReport.id === reportId || selectedReport.reportId === reportId)) {
+        setSelectedReport((prev) => (prev ? { ...prev, priority: newPriority, updatedAt: now } : null));
+      }
+      toast.success(`Priority updated to ${newPriority}`);
+    } catch (err) {
+      toast.error('Failed to update priority');
     }
-    toast.success(`Priority updated to ${newPriority}`);
   };
 
   const handleAddNote = async (e: React.FormEvent) => {
@@ -89,13 +105,17 @@ export default function AdminReports() {
     setIsSavingNote(true);
     try {
       const noteText = newAdminNote.trim();
-      await addAdminNote(selectedReport.id, noteText);
+      const targetId = selectedReport.id || selectedReport.reportId;
+      await addAdminNote(targetId, noteText);
       const updatedNotes = [...(selectedReport.adminNotes || []), noteText];
+      const now = new Date();
       
-      setSelectedReport((prev) => prev ? { ...prev, adminNotes: updatedNotes, updatedAt: new Date() } : null);
+      setSelectedReport((prev) => (prev ? { ...prev, adminNotes: updatedNotes, updatedAt: now } : null));
       setReports((prev) =>
         prev.map((r) =>
-          r.id === selectedReport.id ? { ...r, adminNotes: updatedNotes, updatedAt: new Date() } : r
+          r.id === selectedReport.id || r.reportId === selectedReport.reportId
+            ? { ...r, adminNotes: updatedNotes, updatedAt: now }
+            : r
         )
       );
       setNewAdminNote('');

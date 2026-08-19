@@ -2,8 +2,8 @@
 // SmartTour — App Entry Point
 // ============================================================================
 
-import { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { lazy, Suspense, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useParams, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './hooks/useAuth';
 import PublicLayout from './layouts/PublicLayout';
@@ -39,6 +39,22 @@ function PageLoader() {
   );
 }
 
+// Redirect scanned QR code URLs like /qr/bopdev-ghat to /report?location=bopdev-ghat
+function QrRedirect() {
+  const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (slug) {
+      navigate(`/report?location=${slug}`, { replace: true });
+    } else {
+      navigate('/report', { replace: true });
+    }
+  }, [slug, navigate]);
+
+  return <PageLoader />;
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -55,6 +71,10 @@ export default function App() {
               <Route path="/track" element={<TrackComplaint />} />
               <Route path="/about" element={<About />} />
             </Route>
+
+            {/* Scanned QR Redirect Shortcut Routes */}
+            <Route path="/qr/:slug" element={<QrRedirect />} />
+            <Route path="/qr" element={<QrRedirect />} />
 
             {/* Admin Login (no layout) */}
             <Route path="/admin/login" element={<AdminLogin />} />

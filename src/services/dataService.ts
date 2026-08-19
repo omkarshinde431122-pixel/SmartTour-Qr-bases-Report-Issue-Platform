@@ -235,15 +235,23 @@ export async function getLocations(): Promise<TouristLocation[]> {
 }
 
 export async function getLocationBySlug(slug: string): Promise<TouristLocation | null> {
+  const normSlug = slug.trim().toLowerCase();
   if (!isFirebaseConfigured || !db) {
-    return mockLocations.find((l) => l.slug === slug) || null;
+    return mockLocations.find((l) => l.slug.toLowerCase() === normSlug || l.id.toLowerCase() === normSlug) || null;
   }
 
   try {
-    const q = query(collection(db, 'locations'), where('slug', '==', slug), limit(1));
-    const snapshot = await getDocs(q);
+    const q1 = query(collection(db, 'locations'), where('slug', '==', slug), limit(1));
+    let snapshot = await getDocs(q1);
+
     if (snapshot.empty) {
-      return mockLocations.find((l) => l.slug === slug) || null;
+      const q2 = query(collection(db, 'locations'), where('slug', '==', normSlug), limit(1));
+      snapshot = await getDocs(q2);
+    }
+
+    if (snapshot.empty) {
+      const fallback = mockLocations.find((l) => l.slug.toLowerCase() === normSlug || l.id.toLowerCase() === normSlug);
+      return fallback || null;
     }
 
     const docSnap = snapshot.docs[0];
@@ -255,7 +263,7 @@ export async function getLocationBySlug(slug: string): Promise<TouristLocation |
     } as TouristLocation;
   } catch (err) {
     console.warn('Firestore getLocationBySlug failed (using fallback):', err);
-    return mockLocations.find((l) => l.slug === slug) || null;
+    return mockLocations.find((l) => l.slug.toLowerCase() === normSlug || l.id.toLowerCase() === normSlug) || null;
   }
 }
 
@@ -352,9 +360,17 @@ export async function getReports(filters?: {
   const map = new Map<string, Report>();
   mockReports.forEach((r) => map.set(r.reportId || r.id, r));
   reportsList.forEach((r) => {
-    const existing = map.get(r.reportId || r.id);
-    if (!existing || (r.updatedAt && existing.updatedAt && r.updatedAt >= existing.updatedAt)) {
-      map.set(r.reportId || r.id, r);
+    const key = r.reportId || r.id;
+    const existing = map.get(key);
+    if (!existing) {
+      map.set(key, r);
+    } else {
+      const exTime = existing.updatedAt instanceof Date ? existing.updatedAt.getTime() : new Date(existing.updatedAt || 0).getTime();
+      const rTime = r.updatedAt instanceof Date ? r.updatedAt.getTime() : new Date(r.updatedAt || r.createdAt).getTime();
+      // Remote Firestore data takes priority unless local cache was updated later
+      if (rTime >= exTime) {
+        map.set(key, r);
+      }
     }
   });
 
@@ -420,25 +436,58 @@ function addMockReport(
 }
 
 export async function getReportByReportId(reportId: string): Promise<Report | null> {
-  const localReport = mockReports.find((r) => r.reportId === reportId || r.id === reportId);
+  const cleanId = reportId.trim().toUpperCase();
+  const localReport = mockReports.find(
+    (r) => (r.reportId && r.reportId.toUpperCase() === cleanId) || (r.id && r.id.toUpperCase() === cleanId)
+  );
 
   if (isFirebaseConfigured && db) {
     try {
-      const q = query(collection(db, 'reports'), where('reportId', '==', reportId), limit(1));
-      const snapshot = await getDocs(q);
+      // 1. Query by reportId field
+      let q = query(collection(db, 'reports'), where('reportId', '==', cleanId), limit(1));
+      let snapshot = await getDocs(q);
+
+      // 2. Fallback to original search string
+      if (snapshot.empty && cleanId !== reportId.trim()) {
+        q = query(collection(db, 'reports'), where('reportId', '==', reportId.trim()), limit(1));
+        snapshot = await getDocs(q);
+      }
+
+      // 3. Fallback to direct document ID check
+      if (snapshot.empty) {
+        const directDocRef = doc(db, 'reports', reportId.trim());
+        const directSnap = await getDoc(directDocRef);
+        if (directSnap.exists()) {
+          const data = directSnap.data();
+          const remoteData = {
+            id: directSnap.id,
+            ...data,
+            createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(),
+            updatedAt: (data.updatedAt as Timestamp)?.toDate() || new Date(),
+            resolvedAt: data.resolvedAt ? (data.resolvedAt as Timestamp)?.toDate() : undefined,
+          } as Report;
+          return remoteData;
+        }
+      }
+
       if (!snapshot.empty) {
         const docSnap = snapshot.docs[0];
         const remoteData = {
           id: docSnap.id,
           ...docSnap.data(),
-          createdAt: (docSnap.data().createdAt as Timestamp)?.toDate(),
-          updatedAt: (docSnap.data().updatedAt as Timestamp)?.toDate(),
+          createdAt: (docSnap.data().createdAt as Timestamp)?.toDate() || new Date(),
+          updatedAt: (docSnap.data().updatedAt as Timestamp)?.toDate() || new Date(),
           resolvedAt: docSnap.data().resolvedAt ? (docSnap.data().resolvedAt as Timestamp)?.toDate() : undefined,
         } as Report;
 
-        if (localReport && localReport.updatedAt > remoteData.updatedAt) {
-          return { ...remoteData, ...localReport };
+        // Keep local cache synced
+        const idx = mockReports.findIndex((r) => r.reportId === remoteData.reportId || r.id === remoteData.id);
+        if (idx !== -1) {
+          mockReports[idx] = remoteData;
+        } else {
+          mockReports.unshift(remoteData);
         }
+
         return remoteData;
       }
     } catch (err) {
@@ -504,17 +553,43 @@ export async function createReport(data: {
   }
 }
 
+// Helper function to resolve Firestore document reference by ID or reportId
+async function findReportDocRef(idOrReportId: string) {
+  if (!db) return null;
+  // Try direct document reference
+  try {
+    const directRef = doc(db, 'reports', idOrReportId);
+    const snap = await getDoc(directRef);
+    if (snap.exists()) {
+      return { ref: directRef, snap };
+    }
+  } catch (e) {}
+
+  // Query by reportId field
+  try {
+    const q = query(collection(db, 'reports'), where('reportId', '==', idOrReportId), limit(1));
+    const querySnap = await getDocs(q);
+    if (!querySnap.empty) {
+      const firstDoc = querySnap.docs[0];
+      return { ref: firstDoc.ref, snap: firstDoc };
+    }
+  } catch (e) {}
+
+  return null;
+}
+
 export async function updateReportStatus(
   id: string,
   status: ReportStatus
 ): Promise<void> {
+  const now = new Date();
   mockReports = mockReports.map((r) =>
     r.id === id || r.reportId === id
       ? {
           ...r,
           status,
-          updatedAt: new Date(),
-          resolvedAt: status === 'resolved' ? new Date() : r.resolvedAt,
+          updatedAt: now,
+          resolvedAt: status === 'resolved' ? now : r.resolvedAt,
         }
       : r
   );
@@ -525,16 +600,29 @@ export async function updateReportStatus(
   if (!isFirebaseConfigured || !db) return;
 
   try {
-    const updates: Record<string, any> = {
-      status,
-      updatedAt: Timestamp.now(),
-    };
-    if (status === 'resolved') {
-      updates.resolvedAt = Timestamp.now();
+    const target = await findReportDocRef(id);
+    if (target) {
+      const updates: Record<string, any> = {
+        status,
+        updatedAt: Timestamp.now(),
+      };
+      if (status === 'resolved') {
+        updates.resolvedAt = Timestamp.now();
+      }
+      await updateDoc(target.ref, updates);
+    } else {
+      // Fallback direct update
+      const updates: Record<string, any> = {
+        status,
+        updatedAt: Timestamp.now(),
+      };
+      if (status === 'resolved') {
+        updates.resolvedAt = Timestamp.now();
+      }
+      await updateDoc(doc(db, 'reports', id), updates);
     }
-    await updateDoc(doc(db, 'reports', id), updates);
   } catch (err) {
-    console.warn('Firestore update failed (updated locally):', err);
+    console.warn('Firestore status update failed (updated locally):', err);
   }
 }
 
@@ -552,10 +640,18 @@ export async function updateReportPriority(
   if (!isFirebaseConfigured || !db) return;
 
   try {
-    await updateDoc(doc(db, 'reports', id), {
-      priority,
-      updatedAt: Timestamp.now(),
-    });
+    const target = await findReportDocRef(id);
+    if (target) {
+      await updateDoc(target.ref, {
+        priority,
+        updatedAt: Timestamp.now(),
+      });
+    } else {
+      await updateDoc(doc(db, 'reports', id), {
+        priority,
+        updatedAt: Timestamp.now(),
+      });
+    }
   } catch (err) {
     console.warn('Firestore priority update failed:', err);
   }
@@ -579,14 +675,23 @@ export async function addAdminNote(id: string, note: string): Promise<void> {
   if (!isFirebaseConfigured || !db) return;
 
   try {
-    const docRef = doc(db, 'reports', id);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      const currentNotes = docSnap.data().adminNotes || [];
-      await updateDoc(docRef, {
+    const target = await findReportDocRef(id);
+    if (target) {
+      const currentNotes = target.snap.data()?.adminNotes || [];
+      await updateDoc(target.ref, {
         adminNotes: [...currentNotes, note],
         updatedAt: Timestamp.now(),
       });
+    } else {
+      const docRef = doc(db, 'reports', id);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const currentNotes = docSnap.data().adminNotes || [];
+        await updateDoc(docRef, {
+          adminNotes: [...currentNotes, note],
+          updatedAt: Timestamp.now(),
+        });
+      }
     }
   } catch (err) {
     console.warn('Firestore note update failed:', err);

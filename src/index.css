@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
 
 /* ============================================================================
    SmartTour — Design System & Custom Styles
@@ -233,6 +234,3 @@
   from { opacity: 0; transform: translateX(20px); }
   to { opacity: 1; transform: translateX(0); }
 }
-
-/* --- Leaflet Map Imports --- */
-@import "leaflet/dist/leaflet.css";
