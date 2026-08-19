@@ -133,10 +133,10 @@ export const SAMPLE_LOCATIONS = [
     name: 'Bopdev Ghat',
     slug: 'bopdev-ghat',
     shortDescription: 'A scenic ghat nestled in the Sahyadri hills, popular for trekking and nature walks.',
-    description: 'Bopdev Ghat is a mountain pass located in the Pune district of Maharashtra. It connects Pune city to the Bhor region. The ghat section is known for its scenic beauty, lush greenery, and multiple trekking trails. It is a popular spot for nature enthusiasts, trekkers, and weekend visitors. The area features ancient caves, panoramic viewpoints, and rich biodiversity.',
+    description: 'Bopdev Ghat is a mountain pass located in the Pune district of Maharashtra connecting Pune to Saswad. The ghat section is known for its scenic beauty, lush greenery, and multiple trekking trails. It is a popular spot for nature enthusiasts, trekkers, and weekend visitors with panoramic valley viewpoints.',
     category: 'ghat' as LocationCategory,
-    latitude: 18.4529,
-    longitude: 73.8774,
+    latitude: 18.4235,
+    longitude: 73.9185,
     images: ['/images/bopdev-ghat.jpg', '/images/bopdev-viewpoint.jpg'],
     facilities: ['Parking', 'Trail Markers', 'Viewpoints', 'Local Food Stalls'],
     difficulty: 'moderate' as TrekDifficulty,
@@ -150,10 +150,10 @@ export const SAMPLE_LOCATIONS = [
     name: 'Kanifnath Temple',
     slug: 'kanifnath-temple',
     shortDescription: 'An ancient hilltop temple dedicated to Saint Kanifnath, offering stunning valley views.',
-    description: 'Kanifnath Temple is an ancient temple situated atop a hill near Saswad in Pune district. Dedicated to the Nath Sampradaya saint Kanifnath, it is both a religious pilgrimage site and a popular trekking destination. The temple offers breathtaking panoramic views of the surrounding valleys and mountains. The trek to the temple is of moderate difficulty and passes through scenic terrain.',
+    description: 'Kanifnath Temple is an ancient temple situated atop a hill near Bopgaon and Saswad in Pune district. Dedicated to the Nath Sampradaya saint Kanifnath, it is both a religious pilgrimage site and a popular trekking destination offering breathtaking panoramic views.',
     category: 'temple' as LocationCategory,
-    latitude: 18.3452,
-    longitude: 73.9876,
+    latitude: 18.3615,
+    longitude: 73.9620,
     images: ['/images/kanifnath-temple.jpg'],
     facilities: ['Parking at Base', 'Steps to Temple', 'Water Availability', 'Shoe Storage'],
     difficulty: 'moderate' as TrekDifficulty,
@@ -169,8 +169,8 @@ export const SAMPLE_LOCATIONS = [
     shortDescription: 'A stunning hilltop viewpoint overlooking the valley and Sahyadri ranges.',
     description: 'This viewpoint at Bopdev Ghat offers one of the most spectacular panoramic views in the region. On clear days, you can see vast stretches of the Sahyadri ranges and the valley below. It is a popular spot for photography and sunrise/sunset views.',
     category: 'viewpoint' as LocationCategory,
-    latitude: 18.4485,
-    longitude: 73.8720,
+    latitude: 18.4215,
+    longitude: 73.9210,
     images: ['/images/bopdev-viewpoint.jpg'],
     facilities: ['Resting Spots', 'Photo Points'],
     importantInfo: 'Best time for sunrise viewing is 6:00-6:30 AM. Be careful near cliff edges.',
@@ -184,8 +184,8 @@ export const SAMPLE_LOCATIONS = [
     shortDescription: 'Main parking area at the base of Bopdev Ghat trekking trails.',
     description: 'The main parking area at Bopdev Ghat provides space for cars and two-wheelers. From here, visitors can access the main trekking trail and the ghat road. Basic amenities like local food stalls are available nearby.',
     category: 'parking' as LocationCategory,
-    latitude: 18.4560,
-    longitude: 73.8810,
+    latitude: 18.4310,
+    longitude: 73.9120,
     images: ['/images/parking-area.jpg'],
     facilities: ['Two-Wheeler Parking', 'Car Parking', 'Food Stalls Nearby'],
     importantInfo: 'Parking may be limited during weekends and holidays. Arrive early for spot availability.',
@@ -199,8 +199,8 @@ export const SAMPLE_LOCATIONS = [
     shortDescription: 'The official starting point for the Bopdev Ghat trek.',
     description: 'This is the official entry point for the main Bopdev Ghat trekking trail. The trail from here leads through forest sections, open grasslands, and rocky terrain before reaching the viewpoint. Trail markers are placed at intervals to guide hikers.',
     category: 'entry' as LocationCategory,
-    latitude: 18.4545,
-    longitude: 73.8795,
+    latitude: 18.4290,
+    longitude: 73.9135,
     images: ['/images/trek-entry.jpg'],
     facilities: ['Trail Map Board', 'First Aid Info', 'Emergency Contact Board'],
     difficulty: 'moderate' as TrekDifficulty,
@@ -214,10 +214,10 @@ export const SAMPLE_LOCATIONS = [
     name: 'Midway Rest Point',
     slug: 'midway-rest-point',
     shortDescription: 'A shaded rest area approximately halfway through the Bopdev Ghat trek.',
-    description: 'Located approximately 3 km into the Bopdev Ghat trek, this natural rest point provides shade and relatively flat ground for trekkers to rest. Some seasonal water availability exists nearby. This is a good point to refuel before the steeper sections ahead.',
+    description: 'Located approximately halfway into the Bopdev Ghat trek, this natural rest point provides shade and relatively flat ground for trekkers to rest. Some seasonal water availability exists nearby.',
     category: 'rest' as LocationCategory,
-    latitude: 18.4510,
-    longitude: 73.8750,
+    latitude: 18.4255,
+    longitude: 73.9160,
     images: ['/images/rest-point.jpg'],
     facilities: ['Shade', 'Flat Ground', 'Seasonal Water'],
     importantInfo: 'Water availability depends on season. Do not rely on it—carry your own water.',
@@ -250,13 +250,13 @@ export const TREKKING_ROUTES: TrekkingRoute[] = [
     distance: '5.2 km',
     estimatedTime: '2 hours',
     positions: [
-      [18.4560, 73.8810], // Parking
-      [18.4545, 73.8795], // Entry
-      [18.4530, 73.8770], // Trail midpoint 1
-      [18.4510, 73.8750], // Midway Rest Point
-      [18.4490, 73.8740], // Steep climb section
-      [18.4475, 73.8725], // Ridge walk
-      [18.4529, 73.8774], // Bopdev Ghat Viewpoint
+      [18.4310, 73.9120], // Parking
+      [18.4290, 73.9135], // Entry
+      [18.4275, 73.9148], // Trail midpoint 1
+      [18.4255, 73.9160], // Midway Rest Point
+      [18.4240, 73.9172], // Steep climb section
+      [18.4225, 73.9195], // Ridge walk
+      [18.4215, 73.9210], // Bopdev Ghat Viewpoint
     ],
   },
   {
@@ -268,15 +268,14 @@ export const TREKKING_ROUTES: TrekkingRoute[] = [
     distance: '3.8 km',
     estimatedTime: '1.5 hours',
     positions: [
-      [18.4400, 73.9100], // Base village
-      [18.4380, 73.9080], // Lower stairs section
-      [18.4350, 73.9050], // Mid-hill plateau
-      [18.4320, 73.9010], // Temple Approach Trail
-      [18.4300, 73.8980], // Kanifnath Temple
+      [18.3520, 73.9550], // Base village
+      [18.3550, 73.9575], // Lower stairs section
+      [18.3580, 73.9595], // Mid-hill plateau
+      [18.3600, 73.9610], // Temple Approach Trail
+      [18.3615, 73.9620], // Kanifnath Temple
     ],
   },
 ];
-
 
 // --- App Config ---
 
@@ -298,7 +297,7 @@ export const IMAGE_COMPRESSION_OPTIONS = {
 };
 
 // Map defaults (centered on Bopdev Ghat area)
-export const MAP_DEFAULT_CENTER: [number, number] = [18.4529, 73.8774];
+export const MAP_DEFAULT_CENTER: [number, number] = [18.4235, 73.9185];
 export const MAP_DEFAULT_ZOOM = 13;
 export const MAP_MIN_ZOOM = 8;
 export const MAP_MAX_ZOOM = 20;

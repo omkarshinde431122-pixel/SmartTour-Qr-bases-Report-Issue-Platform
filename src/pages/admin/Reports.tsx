@@ -30,6 +30,20 @@ export default function AdminReports() {
 
   useEffect(() => {
     fetchData();
+
+    const handleReportsUpdate = (e: Event) => {
+      const customEvt = e as CustomEvent<Report[]>;
+      if (customEvt.detail && Array.isArray(customEvt.detail)) {
+        setReports(customEvt.detail);
+      }
+    };
+
+    window.addEventListener('smarttour_reports_updated', handleReportsUpdate);
+    window.addEventListener('storage', handleReportsUpdate);
+    return () => {
+      window.removeEventListener('smarttour_reports_updated', handleReportsUpdate);
+      window.removeEventListener('storage', handleReportsUpdate);
+    };
   }, []);
 
   const fetchData = async () => {
@@ -58,15 +72,20 @@ export default function AdminReports() {
   const handleStatusChange = async (reportId: string, newStatus: ReportStatus) => {
     try {
       await updateReportStatus(reportId, newStatus);
+      const clean = (reportId || '').trim().toLowerCase();
       const now = new Date();
       setReports((prev) =>
         prev.map((r) =>
-          r.id === reportId || r.reportId === reportId
+          (r.id && r.id.toLowerCase() === clean) || (r.reportId && r.reportId.toLowerCase() === clean)
             ? { ...r, status: newStatus, updatedAt: now, resolvedAt: newStatus === 'resolved' ? now : r.resolvedAt }
             : r
         )
       );
-      if (selectedReport && (selectedReport.id === reportId || selectedReport.reportId === reportId)) {
+      if (
+        selectedReport &&
+        ((selectedReport.id && selectedReport.id.toLowerCase() === clean) ||
+          (selectedReport.reportId && selectedReport.reportId.toLowerCase() === clean))
+      ) {
         setSelectedReport((prev) =>
           prev
             ? { ...prev, status: newStatus, updatedAt: now, resolvedAt: newStatus === 'resolved' ? now : prev.resolvedAt }
@@ -76,20 +95,27 @@ export default function AdminReports() {
       const statusObj = STATUS_MAP[newStatus];
       toast.success(`Status updated to ${statusObj?.label || newStatus}`);
     } catch (err) {
-      toast.error('Failed to update status in database');
+      toast.error('Failed to update status');
     }
   };
 
   const handlePriorityChange = async (reportId: string, newPriority: ReportPriority) => {
     try {
       await updateReportPriority(reportId, newPriority);
+      const clean = (reportId || '').trim().toLowerCase();
       const now = new Date();
       setReports((prev) =>
         prev.map((r) =>
-          r.id === reportId || r.reportId === reportId ? { ...r, priority: newPriority, updatedAt: now } : r
+          (r.id && r.id.toLowerCase() === clean) || (r.reportId && r.reportId.toLowerCase() === clean)
+            ? { ...r, priority: newPriority, updatedAt: now }
+            : r
         )
       );
-      if (selectedReport && (selectedReport.id === reportId || selectedReport.reportId === reportId)) {
+      if (
+        selectedReport &&
+        ((selectedReport.id && selectedReport.id.toLowerCase() === clean) ||
+          (selectedReport.reportId && selectedReport.reportId.toLowerCase() === clean))
+      ) {
         setSelectedReport((prev) => (prev ? { ...prev, priority: newPriority, updatedAt: now } : null));
       }
       toast.success(`Priority updated to ${newPriority}`);
@@ -214,8 +240,8 @@ export default function AdminReports() {
                     <td className="py-3 px-4">
                       <select
                         value={report.status}
-                        onChange={(e) => handleStatusChange(report.id, e.target.value as ReportStatus)}
-                        className="text-xs font-medium rounded-lg border px-2 py-1"
+                        onChange={(e) => handleStatusChange(report.reportId || report.id, e.target.value as ReportStatus)}
+                        className="text-xs font-medium rounded-lg border px-2 py-1 cursor-pointer font-medium"
                         style={{ borderColor: status?.color + '40', backgroundColor: status?.bgColor, color: status?.color }}
                       >
                         {REPORT_STATUSES.map((s) => (
@@ -331,7 +357,7 @@ export default function AdminReports() {
                       {REPORT_STATUSES.map((s) => (
                         <button
                           key={s.value}
-                          onClick={() => handleStatusChange(selectedReport.id, s.value)}
+                          onClick={() => handleStatusChange(selectedReport.reportId || selectedReport.id, s.value)}
                           className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                             selectedReport.status === s.value
                               ? 'ring-2'
@@ -356,7 +382,7 @@ export default function AdminReports() {
                       {REPORT_PRIORITIES.map((p) => (
                         <button
                           key={p.value}
-                          onClick={() => handlePriorityChange(selectedReport.id, p.value)}
+                          onClick={() => handlePriorityChange(selectedReport.reportId || selectedReport.id, p.value)}
                           className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                             selectedReport.priority === p.value
                               ? 'ring-2'

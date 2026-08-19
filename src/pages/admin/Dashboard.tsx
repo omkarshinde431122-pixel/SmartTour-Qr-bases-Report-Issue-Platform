@@ -46,22 +46,35 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [statsData, reportsData] = await Promise.all([
-          getDashboardStats(),
-          getReports(),
-        ]);
-        setStats(statsData);
-        setReports(reportsData);
-      } catch (error) {
-        console.error('Failed to fetch dashboard data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchData();
+
+    const handleUpdate = () => {
+      fetchData();
+    };
+
+    window.addEventListener('smarttour_reports_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+
+    return () => {
+      window.removeEventListener('smarttour_reports_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
   }, []);
+
+  const fetchData = async () => {
+    try {
+      const [statsData, reportsData] = await Promise.all([
+        getDashboardStats(),
+        getReports(),
+      ]);
+      setStats(statsData);
+      setReports(reportsData);
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   if (isLoading) {
     return (

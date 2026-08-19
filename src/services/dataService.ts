@@ -436,6 +436,7 @@ export async function getReports(filters?: {
   locationId?: string;
   priority?: ReportPriority;
 }): Promise<Report[]> {
+  const localReports = loadReportsFromStorage();
   let reportsList: Report[] = [];
 
   if (isFirebaseConfigured && db) {
@@ -449,8 +450,8 @@ export async function getReports(filters?: {
       reportsList = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-        createdAt: (doc.data().createdAt as Timestamp)?.toDate(),
-        updatedAt: (doc.data().updatedAt as Timestamp)?.toDate(),
+        createdAt: (doc.data().createdAt as Timestamp)?.toDate() || new Date(),
+        updatedAt: (doc.data().updatedAt as Timestamp)?.toDate() || new Date(),
         resolvedAt: doc.data().resolvedAt ? (doc.data().resolvedAt as Timestamp)?.toDate() : undefined,
       })) as Report[];
     } catch (err) {
@@ -458,25 +459,46 @@ export async function getReports(filters?: {
     }
   }
 
-  // Merge with mock/local reports so local updates are never lost
+  // Unified merge: Keep local updates so admin changes are NEVER lost on refresh
   const map = new Map<string, Report>();
-  mockReports.forEach((r) => map.set(r.reportId || r.id, r));
-  reportsList.forEach((r) => {
-    const key = r.reportId || r.id;
-    const existing = map.get(key);
-    if (!existing) {
-      map.set(key, r);
+  localReports.forEach((r) => {
+    const key = (r.reportId || r.id).trim().toUpperCase();
+    map.set(key, r);
+  });
+
+  reportsList.forEach((remote) => {
+    const key = (remote.reportId || remote.id).trim().toUpperCase();
+    const existingLocal = map.get(key);
+    if (!existingLocal) {
+      map.set(key, remote);
     } else {
-      const exTime = existing.updatedAt instanceof Date ? existing.updatedAt.getTime() : new Date(existing.updatedAt || 0).getTime();
-      const rTime = r.updatedAt instanceof Date ? r.updatedAt.getTime() : new Date(r.updatedAt || r.createdAt).getTime();
-      // Remote Firestore data takes priority unless local cache was updated later
-      if (rTime >= exTime) {
-        map.set(key, r);
+      const localTime = existingLocal.updatedAt instanceof Date ? existingLocal.updatedAt.getTime() : new Date(existingLocal.updatedAt || 0).getTime();
+      const remoteTime = remote.updatedAt instanceof Date ? remote.updatedAt.getTime() : new Date(remote.updatedAt || 0).getTime();
+
+      // If local status or adminNotes were modified, preserve them
+      if (
+        localTime >= remoteTime ||
+        (existingLocal.status !== 'reported' && remote.status === 'reported') ||
+        (existingLocal.adminNotes?.length || 0) > (remote.adminNotes?.length || 0)
+      ) {
+        map.set(key, {
+          ...remote,
+          ...existingLocal,
+          id: existingLocal.id || remote.id,
+          reportId: existingLocal.reportId || remote.reportId,
+          status: existingLocal.status,
+          adminNotes: existingLocal.adminNotes && existingLocal.adminNotes.length > 0 ? existingLocal.adminNotes : (remote.adminNotes || []),
+          updatedAt: new Date(Math.max(localTime, remoteTime)),
+        });
+      } else {
+        map.set(key, remote);
       }
     }
   });
 
   let merged = Array.from(map.values());
+  saveReportsToStorage(merged);
+
   if (filters?.status) merged = merged.filter((r) => r.status === filters.status);
   if (filters?.category) merged = merged.filter((r) => r.category === filters.category);
   if (filters?.locationId) merged = merged.filter((r) => r.locationId === filters.locationId);
@@ -535,7 +557,7 @@ function addMockReport(
 }
 
 export async function getReportByReportId(reportId: string): Promise<Report | null> {
-  const cleanId = reportId.trim().toUpperCase();
+  const cleanId = (reportId || '').trim().toUpperCase();
   const currentReports = loadReportsFromStorage();
   const localReport = currentReports.find(
     (r) => (r.reportId && r.reportId.toUpperCase() === cleanId) || (r.id && r.id.toUpperCase() === cleanId)
@@ -566,6 +588,11 @@ export async function getReportByReportId(reportId: string): Promise<Report | nu
             updatedAt: (data.updatedAt as Timestamp)?.toDate() || new Date(),
             resolvedAt: data.resolvedAt ? (data.resolvedAt as Timestamp)?.toDate() : undefined,
           } as Report;
+          
+          if (localReport && localReport.status !== 'reported' && remoteData.status === 'reported') {
+            remoteData.status = localReport.status;
+            remoteData.adminNotes = localReport.adminNotes || remoteData.adminNotes;
+          }
           return remoteData;
         }
       }
@@ -580,10 +607,15 @@ export async function getReportByReportId(reportId: string): Promise<Report | nu
           resolvedAt: docSnap.data().resolvedAt ? (docSnap.data().resolvedAt as Timestamp)?.toDate() : undefined,
         } as Report;
 
+        if (localReport && localReport.status !== 'reported' && remoteData.status === 'reported') {
+          remoteData.status = localReport.status;
+          remoteData.adminNotes = localReport.adminNotes || remoteData.adminNotes;
+        }
+
         // Keep local cache synced
         const idx = currentReports.findIndex((r) => r.reportId === remoteData.reportId || r.id === remoteData.id);
         if (idx !== -1) {
-          currentReports[idx] = remoteData;
+          currentReports[idx] = { ...remoteData, ...currentReports[idx], status: currentReports[idx].status || remoteData.status };
         } else {
           currentReports.unshift(remoteData);
         }
@@ -657,9 +689,10 @@ export async function createReport(data: {
 // Helper function to resolve Firestore document reference by ID or reportId
 async function findReportDocRef(idOrReportId: string) {
   if (!db) return null;
+  const clean = (idOrReportId || '').trim();
   // Try direct document reference
   try {
-    const directRef = doc(db, 'reports', idOrReportId);
+    const directRef = doc(db, 'reports', clean);
     const snap = await getDoc(directRef);
     if (snap.exists()) {
       return { ref: directRef, snap };
@@ -668,7 +701,7 @@ async function findReportDocRef(idOrReportId: string) {
 
   // Query by reportId field
   try {
-    const q = query(collection(db, 'reports'), where('reportId', '==', idOrReportId), limit(1));
+    const q = query(collection(db, 'reports'), where('reportId', '==', clean.toUpperCase()), limit(1));
     const querySnap = await getDocs(q);
     if (!querySnap.empty) {
       const firstDoc = querySnap.docs[0];
@@ -684,17 +717,22 @@ export async function updateReportStatus(
   status: ReportStatus
 ): Promise<void> {
   const now = new Date();
+  const cleanId = (id || '').trim().toLowerCase();
   const currentReports = loadReportsFromStorage();
-  const updatedReports = currentReports.map((r) =>
-    r.id === id || r.reportId === id
-      ? {
-          ...r,
-          status,
-          updatedAt: now,
-          resolvedAt: status === 'resolved' ? now : r.resolvedAt,
-        }
-      : r
-  );
+  const updatedReports = currentReports.map((r) => {
+    const match =
+      (r.id && r.id.toLowerCase() === cleanId) ||
+      (r.reportId && r.reportId.toLowerCase() === cleanId);
+    if (match) {
+      return {
+        ...r,
+        status,
+        updatedAt: now,
+        resolvedAt: status === 'resolved' ? now : r.resolvedAt,
+      };
+    }
+    return r;
+  });
   saveReportsToStorage(updatedReports);
 
   if (!isFirebaseConfigured || !db) return;
@@ -722,7 +760,7 @@ export async function updateReportStatus(
       await updateDoc(doc(db, 'reports', id), updates);
     }
   } catch (err) {
-    console.warn('Firestore status update failed (updated locally):', err);
+    console.warn('Firestore status update (saved locally):', err);
   }
 }
 
@@ -730,10 +768,17 @@ export async function updateReportPriority(
   id: string,
   priority: ReportPriority
 ): Promise<void> {
+  const cleanId = (id || '').trim().toLowerCase();
   const currentReports = loadReportsFromStorage();
-  const updatedReports = currentReports.map((r) =>
-    r.id === id || r.reportId === id ? { ...r, priority, updatedAt: new Date() } : r
-  );
+  const updatedReports = currentReports.map((r) => {
+    const match =
+      (r.id && r.id.toLowerCase() === cleanId) ||
+      (r.reportId && r.reportId.toLowerCase() === cleanId);
+    if (match) {
+      return { ...r, priority, updatedAt: new Date() };
+    }
+    return r;
+  });
   saveReportsToStorage(updatedReports);
 
   if (!isFirebaseConfigured || !db) return;
@@ -752,14 +797,18 @@ export async function updateReportPriority(
       });
     }
   } catch (err) {
-    console.warn('Firestore priority update failed:', err);
+    console.warn('Firestore priority update (saved locally):', err);
   }
 }
 
 export async function addAdminNote(id: string, note: string): Promise<void> {
+  const cleanId = (id || '').trim().toLowerCase();
   const currentReports = loadReportsFromStorage();
   const updatedReports = currentReports.map((r) => {
-    if (r.id === id || r.reportId === id) {
+    const match =
+      (r.id && r.id.toLowerCase() === cleanId) ||
+      (r.reportId && r.reportId.toLowerCase() === cleanId);
+    if (match) {
       return {
         ...r,
         adminNotes: [...(r.adminNotes || []), note],
@@ -792,7 +841,7 @@ export async function addAdminNote(id: string, note: string): Promise<void> {
       }
     }
   } catch (err) {
-    console.warn('Firestore note update failed:', err);
+    console.warn('Firestore note update (saved locally):', err);
   }
 }
 
